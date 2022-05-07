@@ -1,12 +1,9 @@
-import sqlite3
 from os.path import join, abspath
 
 from openpyxl import Workbook
 from openpyxl.formatting import Rule
 from openpyxl.styles import PatternFill
 from openpyxl.styles.differential import DifferentialStyle
-
-from def_xls_db import DB
 
 COLUMN_LIST = ['A', 'B', 'C', 'E', 'G', 'H', 'I', 'K']
 WIDTH_LIST = [28, 18, 18, 22, 22, 18, 12, 12]
@@ -55,31 +52,22 @@ def calculation_list(cur):
     Return a list of details with calculations data based on the 'calculation' table.
     Create a table header.
     """
-    # conn = sqlite3.connect('./calculations.db')
-    # cur = conn.cursor()
-
     cur.execute("SELECT * FROM det_data d JOIN calculation c on d.ord_det = c.ord_det ORDER BY d.ord_det")
     data_1 = cur.fetchall()
     t_header = table_header(cur)
     data = [t_header]
-    # print(data)
     for i in data_1:
         data.append(i[0:4] + i[5:12])
-    # print(data)
-    # conn.commit()
-    # conn.close()
 
     return data, t_header
 
 
-def calculation_data(date, e_list=None):
+def calculation_data(cur, date, e_list=None):
     """
     Creating a file filled with calculation data
     """
     wb = Workbook()
     ws = wb.active
-    conn = sqlite3.connect(DB)
-    cur = conn.cursor()
 
     data, t_header = calculation_list(cur)
     for row in data:
@@ -87,9 +75,6 @@ def calculation_data(date, e_list=None):
 
     if e_list:
         empty_sheet(e_list, wb, t_header, cur)
-
-    conn.commit()
-    conn.close()
 
     col_width(ws, COLUMN_LIST, WIDTH_LIST)
 

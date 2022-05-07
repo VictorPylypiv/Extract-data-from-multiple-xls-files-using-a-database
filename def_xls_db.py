@@ -1,46 +1,38 @@
 import os
 import re
-import sqlite3
 from os.path import join, abspath
 from sqlite3 import OperationalError, IntegrityError
 
 from openpyxl import load_workbook
 
 DB = './calculations.db'
+# DB = ':memory:'
 PATH_C = "\\calculations\\"
 PATH_HF = "\\halffabricat_orders\\"
 SHEET_NAME = "матеріали"
 
 
-def create_tables(db):
-    conn = sqlite3.connect(db)
+def create_tables(cur):
     try:
         with open('create_tables.sql', 'r') as sql_file:
-            conn.executescript(sql_file.read())
+            cur.executescript(sql_file.read())
     except OperationalError as msg:
         print("Error: ", msg)
 
-    conn.commit()
-    conn.close()
 
-
-def imp_table_data(db, ws_table, min_row=2, min_col=1):
+def imp_table_data(cur, ws_table, min_row=2, min_col=1):
     """
     Import data from a sheet table where the cells in the first column are row IDs
     """
-    conn = sqlite3.connect(db)
-    cur = conn.cursor()
     for row in ws_table.iter_rows(min_row=min_row, min_col=min_col, max_row=ws_table.max_row,
                                   max_col=ws_table.max_column, values_only=True):
         try:
             cur.execute("INSERT INTO det_data VALUES (?, ?, ?, ?)", row)
         except IntegrityError:
             print(f'{row[0]} is already in the table "det_data"')
-    conn.commit()
-    conn.close()
 
 
-def imp_det_list(db, date: str):
+def imp_det_list(cur, date: str):
     """
     Import data from a file
     """
@@ -50,7 +42,7 @@ def imp_det_list(db, date: str):
     wb = load_workbook(filename=data_path, data_only=True, read_only=True)
     s_name = list(wb.sheetnames)[0]
     ws_t = wb[s_name]
-    imp_table_data(db, ws_t)
+    imp_table_data(cur, ws_t)
 
     wb.close()
 
@@ -66,12 +58,10 @@ def file_name_re(name_re, file_list):
             return name_m.group()
 
 
-def get_files_name(db, path_dir):
+def get_files_name(cur, path_dir):
     """
     Get file names according to the detail list (calculations)
     """
-    conn = sqlite3.connect(db)
-    cur = conn.cursor()
     data = cur.execute("SELECT ord_det FROM det_data").fetchall()
     list_calc = os.listdir('.' + path_dir)
     e_list = []     # detail list without calculation
@@ -86,8 +76,7 @@ def get_files_name(db, path_dir):
                 print(f'{d[0]} is already in the table "calc_files"')
         else:
             e_list.append(d[0])
-    conn.commit()
-    conn.close()
+
     return e_list
 
 
@@ -117,12 +106,10 @@ def imp_det_calc(ord_det, ws, cur):
                             """, c_data_2)
 
 
-def get_data_calc(db, path_dir, s_n, e_list):
+def get_data_calc(cur, path_dir, s_n, e_list):
     """
     Get data from calculation files
     """
-    conn = sqlite3.connect(db)
-    cur = conn.cursor()
     f_list = cur.execute('SELECT DISTINCT * FROM calc_files').fetchall()
 
     for d in f_list:
@@ -143,8 +130,5 @@ def get_data_calc(db, path_dir, s_n, e_list):
     empty = cur.fetchall()
     for d in empty:
         e_list.append(d[0])
-
-    conn.commit()
-    conn.close()
 
     return e_list

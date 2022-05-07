@@ -1,5 +1,4 @@
 import os
-import sqlite3
 from os.path import join, abspath
 from sqlite3 import IntegrityError
 
@@ -23,7 +22,8 @@ def get_hf_names(cur, path_dir):
             except IntegrityError:
                 pass
 
-    return cur.execute("SELECT * FROM hf_files").fetchall()
+    list_hf_f = cur.execute("SELECT * FROM hf_files").fetchall()
+    return list_hf_f
 
 
 def imp_hf_data(cur, path_dir):
@@ -49,14 +49,12 @@ def imp_hf_data(cur, path_dir):
                             pass
 
 
-def get_data_calc_hf(db, path_dir):
+def get_data_calc_hf(cur, path_dir):
     """
     Replace the material with semi-finished product.
     If the part has a semi-finished product, we must replace the material with it
     from the directory of semi-finished products get file names according to the order list.
     """
-    conn = sqlite3.connect(db)
-    cur = conn.cursor()
     imp_hf_data(cur, path_dir)
 
     cur.execute("""
@@ -76,6 +74,3 @@ def get_data_calc_hf(db, path_dir):
                      WHERE calculation.ord_det = s.ord_det AND 
                            calculation.part_num = s.part_num
                 """)
-
-    conn.commit()
-    conn.close()
